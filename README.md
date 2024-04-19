@@ -35,8 +35,11 @@ The clown API is JSON-based; **all responses should be in JSON format** only.
 | Route    | Method | Response                                   |
 | -------- | ------ | ------------------------------------------ |
 | `/`      | `GET`  | Returns a welcome message                  |
-| `/clown` | `GET`  | Returns a list of clowns and their details |
+| `/clown` | `GET`  | Returns a list of clowns and their details. Can be sorted by the clowns average review score. |
 | `/clown` | `POST` | Creates a new clown in the database        |
+| `/clown/clown_id` | `GET` | Gets a specific clown from the database|
+| `/clown/clown_id/review` | `POST` | Adds a review for the clown|
+
 
 ## Tasks
 
