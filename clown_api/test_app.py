@@ -49,8 +49,8 @@ class TestAPIClownGet:
 
         test_app.get("/clown")
 
-        assert mock_execute.call_count == 1
-        assert mock_fetch.call_count == 1
+        assert mock_execute.call_count == 2
+        assert mock_fetch.call_count == 2
 
 
 class TestAPIClownPost:

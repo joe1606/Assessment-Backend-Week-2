@@ -1,7 +1,6 @@
 """This file defines the API routes."""
 
 # pylint: disable = no-name-in-module
-
 from flask import Flask, Response, request, jsonify
 from psycopg2.errors import ForeignKeyViolation
 
@@ -20,14 +19,48 @@ def index() -> Response:
     })
 
 
+
 @app.route("/clown", methods=["GET", "POST"])
 def get_clowns() -> Response:
     """Returns a list of clowns in response to a GET request;
     Creates a new clown in response to a POST request."""
     if request.method == "GET":
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM clown;")
-            return jsonify(cur.fetchall())
+
+            order = request.args.get("order")
+            if not order:
+                order = 'descending'
+
+            if order not in {'ascending':'ASC', 'descending':'DESC'}.keys():
+                return jsonify({'error': 'order is ascending or descending'}), 404
+            
+            order = {'ascending': 'ASC', 'descending': 'DESC'}[order]
+
+            query_with_ratings = f"""SELECT c.clown_id, c.clown_name, s.speciality_name,
+                            AVG(r.rating) AS average_rating,COUNT(r.review_id) AS review_count
+                            FROM clown AS c
+                            LEFT JOIN review AS r ON c.clown_id = r.clown_id
+                            JOIN speciality AS s ON c.speciality_id = s.speciality_id
+                            WHERE r.review_id IS NOT NULL
+                            GROUP BY c.clown_id, c.clown_name, s.speciality_name
+                            ORDER BY average_rating {order};"""
+            query_without_ratings = """
+                            SELECT c.clown_id, c.clown_name, s.speciality_name
+                            FROM clown AS c
+                            LEFT JOIN review AS r ON c.clown_id = r.clown_id
+                            JOIN speciality AS s ON c.speciality_id = s.speciality_id
+                            WHERE r.review_id IS NULL
+                            GROUP BY c.clown_id, c.clown_name, s.speciality_name;
+                            """
+
+            cur.execute(query_with_ratings)
+            results_with_ratings = cur.fetchall()
+
+            cur.execute(query_without_ratings)
+            results_without_ratings = cur.fetchall()
+
+            return jsonify(results_with_ratings + results_without_ratings)
+        
 
     else:
         data = request.json
@@ -60,6 +93,7 @@ def find_clown_from_id(cursor, clown_id) -> bool:
     valid_id = cursor.fetchall()
     return clown_id in [id['clown_id'] for id in valid_id]
 
+
 @app.route("/clown/<int:clown_id>", methods=["GET"])
 def get_clown(clown_id: int) -> Response:
     """Returns clown information based on ID input"""
@@ -74,11 +108,17 @@ def get_clown(clown_id: int) -> Response:
             return jsonify({'error': 'matching ID not found for clown'}), 404
 
         cursor.execute(
-            "SELECT * FROM clown WHERE clown_id = %s;", (clown_id, ))
+            """SELECT c.clown_id, c.clown_name, s.speciality_name, 
+                avg(r.rating) AS average_rating, COUNT(r.review_id) AS number_of_ratings
+                FROM clown AS c
+                LEFT JOIN review AS r ON c.clown_id = r.clown_id
+                JOIN speciality AS s ON c.speciality_id = s.speciality_id
+                WHERE c.clown_id = %s
+                GROUP BY c.clown_id, c.clown_name, s.speciality_name
+                HAVING COUNT(r.review_id) IS NOT NULL;""", (clown_id, ))
         return_data = cursor.fetchall()
 
-        cursor.close()
-        connection.close()
+
         return jsonify(return_data)
 
 
@@ -107,5 +147,7 @@ def review_clown(clown_id: int) -> Response:
     return {'success': 'rating for clown added'}, 200
 
 
+
 if __name__ == "__main__":
     app.run(port=8080, debug=True)
+
