@@ -112,8 +112,8 @@ class TestAPIClownPost:
             .fetchall.return_value = [new_fake_clown_with_ratings]
 
         response = test_app.get('/clown/1')
-        print(response)
-        assert response.json == [new_fake_clown_with_ratings]
+        returned_clown = response.json
+        assert returned_clown == [new_fake_clown_with_ratings]
 
 
     @patch('app.get_db_connection')
