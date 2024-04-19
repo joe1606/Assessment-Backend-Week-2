@@ -1,5 +1,7 @@
 """This file contains tests for the API."""
 
+from app import app
+import unittest
 from unittest.mock import patch
 
 
@@ -100,3 +102,31 @@ class TestAPIClownPost:
 
         assert mock_fetch.call_count == 1
         assert mock_execute.call_count == 1
+
+
+    @patch('app.get_db_connection')
+    def test_get_clown_by_id(self, mock_get_db_connection, test_app, new_fake_clown_with_ratings):
+        """Tests that the /clown/1 endpoint returns clown data"""
+        mock_get_db_connection.return_value.cursor.return_value\
+            .execute.return_value\
+            .fetchall.return_value = [new_fake_clown_with_ratings]
+
+        response = test_app.get('/clown/1')
+        print(response)
+        assert response.json == [new_fake_clown_with_ratings]
+
+
+    @patch('app.get_db_connection')
+    def test_get_clowns_endpoint(self, mock_get_db_connection, test_app, new_fake_clown_with_ratings):
+        mock_get_db_connection.return_value.cursor.return_value\
+            .execute.return_value\
+            .fetchall.return_value = [new_fake_clown_with_ratings]
+
+        response = test_app.get('/clown')
+        
+        assert 'clown_name' in response.json[0]
+        assert 'speciality_name' in response.json[0]
+
+
+if __name__ == '__main__':
+    unittest.main()
